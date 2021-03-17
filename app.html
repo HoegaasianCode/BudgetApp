@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<style>
+    table, tr, td, th {
+        border: 1px solid lightgray;
+        border-collapse: collapse;
+    }
+    td, th {
+        padding: 4px;
+    }
+    th {
+        background-color: rgb(226, 113, 230);
+        border: 1px solid darkblue;
+        color: white;
+    }
+    tr:nth-child(even) {
+        background: antiquewhite;
+    }
+</style>
+<body>
+    <table id="app"></table>
+<br>
+<input type="text" id="categoryDescription" placeholder="Beskriv kategori">
+<input type="number" id="categoryBudget" placeholder="Budsjettert sum">
+<button onclick="addCategory()">Legg til ny kategori</button>
+</br>
+<input type="text" id="purchaseDescription" placeholder="Beskriv kjøp">
+<input type="number" id="purchaseSum" placeholder="sum">
+<select id="selectCategory" onchange="createPurchaseDropdown()"></select>
+<button onclick="addPurchase()">Legg til kjøp på valgt kategori</button>
+<br>
+<select id="selectPurchase"></select>
+<button onclick="deletePurchase()">Slett kjøp innen valgt kategori</button>
+<script>
+
+const model = {
+    budgetCategories : [
+        {id: 1, description: 'Mat', monthlyBudget: 5000},
+        {id: 2, description: 'Husleie', monthlyBudget: 7000},
+        {id: 3, description: 'Transport', monthlyBudget: 3000},
+    ],
+    spendings: [
+        { category: 1, description: 'Rema', date: '2020-06-23', amount: 523},
+        { category: 1, description: 'Kiwi', date: '2020-06-13', amount: 302},
+        { category: 2, description: 'Husleie', date: '2020-06-01', amount: 7000},
+    ],
+};
+
+console.log(model);
+
+const categoryDescription = document.getElementById('categoryDescription');
+const categoryBudget = document.getElementById('categoryBudget');
+
+function addCategory() {
+let randID = randomID();
+let categoryBudgetInt = parseInt(categoryBudget.value);
+model.budgetCategories.push({
+    id: randID,
+    description: categoryDescription.value,
+    monthlyBudget: categoryBudgetInt,
+});
+    categoryDescription.value = '';
+    categoryBudget.value = '';
+    createCategoryDropdown();
+    createPurchaseDropdown();
+    updateView();
+}
+
+const purchaseSum = document.getElementById('purchaseSum');
+//const purchaseCategory = document.getElementById('purchaseCategory');
+const purchaseDescription = document.getElementById('purchaseDescription');
+//const purchaseDate = document.getElementById('purchaseDescription');
+
+function addPurchase() {
+let categoryInt = parseInt(categoryDropDownHtml.value);
+let purchaseSumInt = parseInt(purchaseSum.value);
+model.spendings.push({
+    category: categoryInt,
+    description: purchaseDescription.value,
+    //date: purchaseDate.value,
+    amount: purchaseSumInt,
+});
+    categoryInt = '';
+    purchaseDescription.value = '';
+    //purchaseDate.value = '';
+    purchaseSum.value = '';
+    createCategoryDropdown();
+    createPurchaseDropdown();
+    updateView();
+}
+
+var app = document.getElementById('app');
+
+updateView();
+
+function updateView() {
+    let html = `
+        <h2>Budsjett</h2>
+            <tr>
+                <th>Kategori</th>
+                <th>Budsjett</th>
+                <th>Brukt</th>
+                <th>Igjen</th>
+                <th></th>
+            </tr>`;
+    for (var i = 0; i < model.budgetCategories.length; i++) {
+        html += createHtmlBudgetCategories(i);
+    }
+    app.innerHTML = html;
+}
+
+function createHtmlBudgetCategories(i) {
+    let category = model.budgetCategories[i];
+    let spent = calcSumSpendings(category.id);
+    let remainder = category.monthlyBudget - spent;
+    if (!category.editMode)
+        return `<tr>
+                <td>${category.description}</td>
+                <td>${category.monthlyBudget}</td>
+                <td>${spent}</td>
+                <td>${remainder}</td>
+                <td>
+                    <button onclick="deleteCategory(${i})">Slett</button>
+                    <button onclick="editCategory(${i})">Rediger</button>
+                </td>
+            </tr>
+        `;
+        return `<tr>
+            <td><input id="editCategoryDescription${i}" type="text" value="${category.description}"/></td>
+            <td><input id="editMonthlyBudget${i}" type="number" value="${category.monthlyBudget}"/></td>
+            <td>
+                <button onclick="updateCategory(${i})">Lagre</button>
+            </td>
+            </tr>`;
+}
+
+function calcSumSpendings(categoryId){
+    let sum = 0;
+    for(let spending of model.spendings){
+        if(spending.category===categoryId){
+            sum += spending.amount;
+        }
+    }
+    return sum;
+}
+
+const categoryDropDownHtml = document.getElementById('selectCategory');
+
+createCategoryDropdown();
+
+function createCategoryDropdown() {
+    categoryDropDownHtml.innerHTML = '';
+    for(let category of model.budgetCategories) {
+        categoryDropDownHtml.innerHTML += `
+        <option value="${category.id}">${category.description}</option>`;}
+}
+
+const purchaseDropDownHtml = document.getElementById('selectPurchase');
+
+createPurchaseDropdown();
+
+function createPurchaseDropdown() {
+    purchaseDropDownHtml.innerHTML = '';
+    for (let i = 0; i < model.spendings.length; i++) {
+        let spending = model.spendings[i];
+        if(categoryDropDownHtml.value==spending.category){
+            purchaseDropDownHtml.innerHTML += `
+            <option value="${i}">${spending.description}</option>`; }
+        }
+    }
+
+function deletePurchase() {
+    model.spendings.splice(purchaseDropDownHtml.value, 1);
+        createPurchaseDropdown();
+        updateView();
+    }
+
+function deleteCategory(index) {
+        model.budgetCategories.splice(index, 1);
+        updateView();
+    }
+
+function editCategory(index) {
+        model.budgetCategories[index].editMode = true;
+        updateView();
+    }
+
+function updateCategory(index) {
+const idCategoryDescription = `editCategoryDescription${index}`;
+const categoryDescriptionInputTag = document.getElementById(idCategoryDescription);
+const idCategoryMonthlyBudget = `editMonthlyBudget${index}`;
+const categoryMonthlyBudgetInputTag = document.getElementById(idCategoryMonthlyBudget);
+const category = model.budgetCategories[index];
+category.description = categoryDescriptionInputTag.value;
+category.monthlyBudget = categoryMonthlyBudgetInputTag.value;
+category.editMode = false;
+updateView();
+} 
+
+function randomID() {
+    return Math.floor((Math.random() * 100000000) + 3);
+}
+
+        /* Todo:
+            - Legge til nye kategorier inkl. månedlig sum
+            - Redigere eksisterende kategorier inkl. månedlig sum
+            - Slette kategorier
+            - Legge til kjøp => velge kategori fra drop down (<select>)
+            - Redigere kjøp => velge kategori fra drop down (<select>)
+            - Slette kjøp
+        */
+    </script>
+</body>
+</html>
